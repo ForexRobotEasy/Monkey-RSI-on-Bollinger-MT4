@@ -1,0 +1,97 @@
+
+// Monkey RSI on Bollinger MT4
+// Developer: Forex Robot Easy Team
+// Developer's site: forexroboteasy.com
+
+#property strict
+
+// Indicator input parameters
+input int RSIPeriod = 14;
+input int BBPeriod = 20;
+input double BBDeviation = 2.0;
+
+// Indicator buffers
+double RSI_Buffer[];
+double UpperBB_Buffer[];
+double LowerBB_Buffer[];
+
+// Indicator colors
+color UptrendColor = clrGreen;
+color DowntrendColor = clrRed;
+color OverboughtColor = clrBlue;
+color OversoldColor = clrMagenta;
+
+int OnInit()
+{
+    // Set indicator buffers
+    SetIndexBuffer(0, RSI_Buffer);
+    SetIndexBuffer(1, UpperBB_Buffer);
+    SetIndexBuffer(2, LowerBB_Buffer);
+
+    // Set indicator labels
+    IndicatorSetString(INDICATOR_SHORTNAME, 'Monkey RSI on Bollinger MT4');
+
+    return(INIT_SUCCEEDED);
+}
+
+void OnCalculate(const int rates_total,
+                 const int prev_calculated,
+                 const datetime &time[],
+                 const double &open[],
+                 const double &high[],
+                 const double &low[],
+                 const double &close[],
+                 const long &tick_volume[],
+                 const long &volume[],
+                 const int &spread[])
+{
+    int limit = rates_total - prev_calculated;
+
+    // Calculate RSI
+    for(int i = 0; i < limit; i++)
+    {
+        RSI_Buffer[i] = iRSI(Symbol(), NULL, RSIPeriod, PRICE_CLOSE, i);
+    }
+
+    // Calculate Bollinger Bands
+    for(int i = 0; i < limit; i++)
+    {
+        double upper_band, lower_band;
+        iBands(Symbol(), NULL, BBPeriod, BBDeviation, 0, PRICE_CLOSE, i, upper_band, lower_band);
+
+        UpperBB_Buffer[i] = upper_band;
+        LowerBB_Buffer[i] = lower_band;
+    }
+
+    // Determine market trends and overbought/oversold conditions
+    for(int i = 0; i < limit; i++)
+    {
+        if(RSI_Buffer[i] > 70)
+        {
+            // Overbought condition
+            ChartIndicatorSetDouble(0, INDICATOR_LEVELVALUE, 70);
+            ChartIndicatorSetInteger(0, INDICATOR_LEVELCOLOR, OverboughtColor);
+        }
+        else if(RSI_Buffer[i] < 30)
+        {
+            // Oversold condition
+            ChartIndicatorSetDouble(0, INDICATOR_LEVELVALUE, 30);
+            ChartIndicatorSetInteger(0, INDICATOR_LEVELCOLOR, OversoldColor);
+        }
+        else if(RSI_Buffer[i] > UpperBB_Buffer[i])
+        {
+            // Uptrend
+            ChartIndicatorSetInteger(0, INDICATOR_LEVELCOLOR, UptrendColor);
+        }
+        else if(RSI_Buffer[i] < LowerBB_Buffer[i])
+        {
+            // Downtrend
+            ChartIndicatorSetInteger(0, INDICATOR_LEVELCOLOR, DowntrendColor);
+        }
+        else
+        {
+            // No trend
+            ChartIndicatorSetInteger(0, INDICATOR_LEVELCOLOR, clrNone);
+        }
+    }
+}
